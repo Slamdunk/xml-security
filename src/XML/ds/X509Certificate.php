@@ -77,16 +77,8 @@ final class X509Certificate extends AbstractDsElement
          * Note: This test is not watertight but prevents a string containing illegal characters
          * from being passed and ensures the string roughly follows the correct format for a Base64 encoded string
          */
-        Assert::string(
-            filter_var(
-                $xml->textContent,
-                FILTER_VALIDATE_REGEXP,
-                [
-                    'options' => [
-                        'regexp' => '/^(?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{2}==|[A-Za-z0-9+\/]{3}=)?$/'
-                    ]
-                ]
-            ),
+        Assert::stringPlausibleBase64(
+            $xml->textContent,
             'Certificate is not a valid Base64 encoded string'
         );
 
