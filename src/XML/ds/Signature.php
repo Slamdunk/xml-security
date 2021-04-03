@@ -173,12 +173,10 @@ final class Signature extends AbstractDsElement
 
         $parent = $xml->parentNode;
 
-        $sigMethod = XMLUtils::xpQuery($xml, './ds:SignedInfo/ds:SignatureMethod');
+        $sigMethod = SignatureMethod::getChildrenOfClass($xml);
         Assert::notEmpty($sigMethod, 'Missing ds:SignatureMethod element.');
-        /** @var \DOMElement $sigMethod */
-        $sigMethod = $sigMethod[0];
         Assert::true(
-            $sigMethod->hasAttribute('Algorithm'),
+            $sigMethod[0]->hasAttribute('Algorithm'),
             'Missing "Algorithm" attribute on ds:SignatureMethod element.'
         );
 
