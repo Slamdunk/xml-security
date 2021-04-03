@@ -182,9 +182,9 @@ final class Signature extends AbstractDsElement
 
         // now we extract all available X509 certificates in the signature element
         $certificates = [];
-        foreach (XMLUtils::xpQuery($xml, './ds:KeyInfo/ds:X509Data/ds:X509Certificate') as $certNode) {
+        foreach (X509Certificate::getChildrenOfClass($xml) as $cert) {
             $certificates[] = Certificate::convertToCertificate(
-                str_replace(["\r", "\n", "\t", ' '], '', trim($certNode->textContent))
+                str_replace(["\r", "\n", "\t", ' '], '', $cert->getCertificate())
             );
         }
 
