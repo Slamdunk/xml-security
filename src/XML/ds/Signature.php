@@ -174,7 +174,7 @@ final class Signature extends AbstractDsElement
         $parent = $xml->parentNode;
 
         $sigMethod = SignatureMethod::getChildrenOfClass($xml);
-        Assert::notEmpty($sigMethod, 'Missing ds:SignatureMethod element.');
+        Assert::count($sigMethod, 1, 'The ds:Signature element must contain exactly one SignatureMethod element.');
         Assert::true(
             $sigMethod[0]->hasAttribute('Algorithm'),
             'Missing "Algorithm" attribute on ds:SignatureMethod element.'
