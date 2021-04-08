@@ -8,6 +8,7 @@ use DOMElement;
 use SimpleSAML\Assert\Assert;
 use SimpleSAML\XML\Chunk;
 use SimpleSAML\XML\Exception\InvalidDOMElementException;
+use SimpleSAML\XML\ExtendableElementTrait;
 use SimpleSAML\XMLSecurity\Constants;
 use SimpleSAML\XMLSecurity\Exception\InvalidArgumentException;
 
@@ -18,6 +19,9 @@ use SimpleSAML\XMLSecurity\Exception\InvalidArgumentException;
  */
 final class DigestMethod extends AbstractDsElement
 {
+    use ExtendableElementTrait;
+
+
     /**
      * The algorithm.
      *
@@ -25,17 +29,21 @@ final class DigestMethod extends AbstractDsElement
      */
     protected string $Algorithm;
 
+
     /**
-     * @var \SimpleSAML\XML\Chunk[]
+     * @return array|string
      */
-    protected array $elements;
+    public function getNamespace()
+    {
+        return Constants::XS_ANY_NS_OTHER;
+    }
 
 
     /**
      * Initialize a DigestMethod element.
      *
      * @param string $algorithm
-     * @param \SimpleSAML\XML\Chunk[] $elements
+     * @param \SimpleSAML\XML\AbstractXMLElement[] $elements
      */
     public function __construct(string $algorithm, array $elements = [])
     {
@@ -81,31 +89,6 @@ final class DigestMethod extends AbstractDsElement
 
 
     /**
-     * Collect the embedded elements
-     *
-     * @return \SimpleSAML\XML\Chunk[]
-     */
-    public function getElements(): array
-    {
-        return $this->elements;
-    }
-
-
-    /**
-     * Set the value of the elements-property
-     *
-     * @param \SimpleSAML\XML\Chunk[] $elements
-     * @throws \SimpleSAML\Assert\AssertionFailedException if the supplied array contains anything other than Chunk objects
-     */
-    private function setElements(array $elements): void
-    {
-        Assert::allIsInstanceOf($elements, Chunk::class);
-
-        $this->elements = $elements;
-    }
-
-
-    /**
      * Convert XML into a DigestMethod
      *
      * @param \DOMElement $xml The XML element we should load
@@ -145,8 +128,10 @@ final class DigestMethod extends AbstractDsElement
         $e = $this->instantiateParentElement($parent);
         $e->setAttribute('Algorithm', $this->Algorithm);
 
-        foreach ($this->elements as $elt) {
-            $e->appendChild($e->ownerDocument->importNode($elt->getXML(), true));
+        foreach ($this->getElements() as $elt) {
+            if (!$elt->isEmptyElement()) {
+                $elt->toXML($e);
+            }
         }
 
         return $e;
