@@ -39,8 +39,8 @@
         "ext-dom": "*",
 
         "robrichards/xmlseclibs": "^3.1.1",
-        "simplesamlphp/assert": "~0.2.2",
-        "simplesamlphp/xml-common": "~0.3.2"
+        "simplesamlphp/assert": "~0.2.5",
+        "simplesamlphp/xml-common": "~0.4.6"
     },
     "require-dev": {
         "simplesamlphp/simplesamlphp-test-framework": "^1.0.5"
