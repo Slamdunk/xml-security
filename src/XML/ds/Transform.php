@@ -7,7 +7,9 @@ namespace SimpleSAML\XMLSecurity\XML\ds;
 use DOMElement;
 use SimpleSAML\Assert\Assert;
 use SimpleSAML\XML\Chunk;
+use SimpleSAML\XML\ExtendableElementTrait;
 use SimpleSAML\XML\Exception\InvalidDOMElementException;
+use SimpleSAML\XMLSecurity\Constants;
 
 /**
  * Class representing a ds:Transform element.
@@ -16,11 +18,22 @@ use SimpleSAML\XML\Exception\InvalidDOMElementException;
  */
 final class Transform extends AbstractDsElement
 {
+    use ExtendableElementTrait;
+
     /** @var string */
     protected string $Algorithm;
 
-    /** @var \SimpleSAML\XML\Chunk[] */
-    protected array $elements = [];
+    /** @var \SimpleSAML\XML\AbstractXMLElement[] */
+    protected array $xpathElements;
+
+
+    /**
+     * @return array|string
+     */
+    public function getNamespace()
+    {
+        return Constants::XS_ANY_NS_OTHER;
+    }
 
 
     /**
@@ -33,7 +46,16 @@ final class Transform extends AbstractDsElement
         string $Algorithm,
         array $elements = []
     ) {
-        $this->setElements($elements);
+        $xpathElements = $otherElements = [];
+        foreach ($elements as $i) {
+            if ($i->getNamespaceUri() === Constants::XMLDSIGNS && $i->getLocalName() === 'XPath') {
+                $xpathElements[] = $i;
+            } else {
+                $otherElements[] = $i;
+            }
+        }
+        $this->setXPathElements($xpathElements);
+        $this->setElements($otherElements);
         $this->setAlgorithm($Algorithm);
     }
 
@@ -59,27 +81,24 @@ final class Transform extends AbstractDsElement
 
 
     /**
-     * Collect the elements
+     * Set an array with XPath elements.
      *
-     * @return \SimpleSAML\XML\Chunk[]
+     * @param array \SimpleSAML\XML\XMLElementInterface[]
      */
-    public function getElements(): array
+    protected function setXpathElements(array $xpathElements): void
     {
-        return $this->elements;
+        $this->xpathElements = $xpathElements;
     }
 
 
     /**
-     * Set the value of the elements-property
+     * Get an array with all XPath elements present.
      *
-     * @param \SimpleSAML\XML\Chunk[] $elements
-     * @throws \SimpleSAML\Assert\AssertionFailedException if the supplied array contains anything other than Chunk objects
+     * @return \SimpleSAML\XML\XMLElementInterface[]
      */
-    private function setElements(array $elements): void
+    public function getElements(): array
     {
-        Assert::allIsInstanceOf($elements, Chunk::class);
-
-        $this->elements = $elements;
+        return array_merge($this->xpathElements, $this->elements);;
     }
 
 
@@ -123,8 +142,10 @@ final class Transform extends AbstractDsElement
         $e = $this->instantiateParentElement($parent);
         $e->setAttribute('Algorithm', $this->Algorithm);
 
-        foreach ($this->elements as $element) {
-            $e->appendChild($e->ownerDocument->importNode($element->getXML(), true));
+        foreach ($this->getElements() as $elt) {
+            if (!$elt->isEmptyElement()) {
+                $elt->toXML($e);
+            }
         }
 
         return $e;
