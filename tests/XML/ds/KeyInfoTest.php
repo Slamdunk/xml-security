@@ -88,9 +88,8 @@ final class KeyInfoTest extends TestCase
                     ]
                 ),
                 new Chunk(DOMDocumentFactory::fromString(
-                    '<ds:KeySomething>Some unknown tag within the ds-namespace</ds:KeySomething>'
-                )->documentElement),
-                new Chunk(DOMDocumentFactory::fromString('<some>Chunk</some>')->documentElement)
+                    '<ssp:KeySomething xmlns:ssp="urn:custom:ssp">Some unknown tag within the ds-namespace</ssp:KeySomething>'
+                )->documentElement)
             ],
             'abc123'
         );

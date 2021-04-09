@@ -146,10 +146,10 @@ final class EncryptedKeyTest extends TestCase
         $this->assertEquals('http://www.w3.org/2001/04/xmlenc#rsa-1_5', $encryptionMethod->getAlgorithm());
 
         $keyInfo = $encryptedKey->getKeyInfo();
-        $info = $keyInfo->getInfo();
-        $this->assertCount(1, $info);
+        $elements = $keyInfo->getElements();
+        $this->assertCount(1, $elements);
 
-        $encKey = $info[0];
+        $encKey = $elements[0];
         $this->assertInstanceOf(EncryptedKey::class, $encKey);
 
         $referenceList = $encryptedKey->getReferenceList();

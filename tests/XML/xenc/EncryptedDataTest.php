@@ -94,10 +94,10 @@ final class EncryptedDataTest extends TestCase
         $this->assertEquals('http://www.w3.org/2001/04/xmlenc#aes128-cbc', $encryptionMethod->getAlgorithm());
 
         $keyInfo = $encryptedData->getKeyInfo();
-        $info = $keyInfo->getInfo();
-        $this->assertCount(1, $info);
+        $elements = $keyInfo->getElements();
+        $this->assertCount(1, $elements);
 
-        $encKey = $info[0];
+        $encKey = $elements[0];
         $this->assertInstanceOf(EncryptedKey::class, $encKey);
 
         $this->assertEquals('http://www.w3.org/2001/04/xmlenc#Element', $encryptedData->getType());

@@ -8,6 +8,7 @@ use DOMElement;
 use SimpleSAML\Assert\Assert;
 use SimpleSAML\XML\Chunk;
 use SimpleSAML\XML\Exception\InvalidDOMElementException;
+use SimpleSAML\XML\ExtendableElementTrait;
 use SimpleSAML\XMLSecurity\Constants;
 use SimpleSAML\XMLSecurity\XML\xenc\EncryptedData;
 use SimpleSAML\XMLSecurity\XML\xenc\EncryptedKey;
@@ -19,6 +20,9 @@ use SimpleSAML\XMLSecurity\XML\xenc\EncryptedKey;
  */
 final class KeyInfo extends AbstractDsElement
 {
+    use ExtendableElementTrait;
+
+
     /**
      * The Id attribute on this element.
      *
@@ -26,32 +30,42 @@ final class KeyInfo extends AbstractDsElement
      */
     protected ?string $Id = null;
 
+    /** @var \SimpleSAML\XMLSecurity\XML\ds\AbstractDsElement[] */
+    protected array $dsigElements;
+
+
     /**
-     * The various key information elements.
-     *
-     * Array with various elements describing this key.
-     * Unknown elements will be represented by \SimpleSAML\XML\Chunk.
-     *
-     * @var (\SimpleSAML\XML\Chunk|
-     *       \SimpleSAML\XMLSecurity\XML\ds\KeyName|
-     *       \SimpleSAML\XMLSecurity\XML\ds\X509Data|
-     *       \SimpleSAML\XMLSecurity\XML\xenc\EncryptedKey)[]
+     * @return array|string
      */
-    protected array $info = [];
+    public function getNamespace()
+    {
+        return Constants::XS_ANY_NS_OTHER;
+    }
 
 
     /**
      * Initialize a KeyInfo element.
      *
-     * @param (\SimpleSAML\XML\Chunk|
-     *         \SimpleSAML\XMLSecurity\XML\ds\KeyName|
-     *         \SimpleSAML\XMLSecurity\XML\ds\X509Data|
-     *         \SimpleSAML\XMLSecurity\XML\xenc\EncryptedKey)[] $info
+     * @param \SimpleSAML\XMLSecurity\XML\ds\AbstractDsElement[] $info
      * @param string|null $Id
      */
-    public function __construct(array $info, $Id = null)
-    {
-        $this->setInfo($info);
+    public function __construct(
+        array $info,
+        $Id = null
+    ) {
+        Assert::notEmpty($info, 'ds:KeyInfo cannot be empty');
+
+        $dsigElements = $otherElements = [];
+        foreach ($info as $i) {
+            if ($i->getNamespaceUri() === Constants::XMLDSIGNS) {
+                $dsigElements[] = $i;
+            } else {
+                $otherElements[] = $i;
+            }
+        }
+
+        $this->setInfo($dsigElements);
+        $this->setElements($otherElements);
         $this->setId($Id);
     }
 
@@ -81,35 +95,42 @@ final class KeyInfo extends AbstractDsElement
     /**
      * Collect the value of the info-property
      *
-     * @return (\SimpleSAML\XML\Chunk|
-     *          \SimpleSAML\XMLSecurity\XML\ds\KeyName|
-     *          \SimpleSAML\XMLSecurity\XML\ds\X509Data|
-     *          \SimpleSAML\XMLSecurity\XML\xenc\EncryptedKey)[]
+     * @return \SimpleSAML\XML\AbstractXMLElement[]
      */
     public function getInfo(): array
     {
-        return $this->info;
+        return array_merge($this->info, $this->elements);
     }
 
 
     /**
      * Set the value of the info-property
      *
-     * @param (\SimpleSAML\XML\Chunk|
-     *         \SimpleSAML\XMLSecurity\XML\ds\KeyName|
-     *         \SimpleSAML\XMLSecurity\XML\ds\X509Data|
-     *         \SimpleSAML\XMLSecurity\XML\xenc\EncryptedKey)[] $info
-     * @throws \SimpleSAML\Assert\AssertionFailedException  if $info contains
-     *   anything other than KeyName, X509Data, EncryptedKey or Chunk
+     * @param  (\SimpleSAML\XMLSecurity\XML\ds\KeyName|
+     *          \SimpleSAML\XMLSecurity\XML\ds\KeyValue|
+     *          \SimpleSAML\XMLSecurity\XML\ds\RetrievalMethod|
+     *          \SimpleSAML\XMLSecurity\XML\ds\X509Data|
+     *          \SimpleSAML\XMLSecurity\XML\ds\PGPData|
+     *          \SimpleSAML\XMLSecurity\XML\ds\SKPIData|
+     *          \SimpleSAML\XMLSecurity\XML\ds\MgmtData)[] $info
      */
     private function setInfo(array $info): void
     {
-        Assert::notEmpty($info, 'ds:KeyInfo cannot be empty');
         Assert::allIsInstanceOfAny(
             $info,
-            [Chunk::class, KeyName::class, X509Data::class, EncryptedKey::class],
-            'KeyInfo can only contain instances of KeyName, X509Data, EncryptedKey or Chunk.'
+            [
+                 KeyName::class,
+                 KeyValue::class,
+                 RetrievalMethod::class,
+                 X509Data::class,
+//  Not implemented
+//                 PGPData::class,
+//                 SKPIData::class,
+//                 MgmtData::class,
+                 Chunk::class,
+            ],
         );
+
         $this->info = $info;
     }
 
@@ -129,43 +150,51 @@ final class KeyInfo extends AbstractDsElement
         Assert::same($xml->namespaceURI, KeyInfo::NS, InvalidDOMElementException::class);
 
         $Id = self::getAttribute($xml, 'Id', null);
-        $info = [];
+        $elements = [];
 
-        foreach ($xml->childNodes as $n) {
-            if (!($n instanceof DOMElement)) {
+        foreach ($xml->childNodes as $node) {
+
+            if (!($node instanceof DOMElement)) {
                 continue;
-            } elseif ($n->namespaceURI === self::NS) {
-                switch ($n->localName) {
+            } elseif ($node->namespaceURI === self::NS) {
+                switch ($node->localName) {
                     case 'KeyName':
-                        $info[] = KeyName::fromXML($n);
+                        $elements[] = KeyName::fromXML($node);
+                        break;
+                    case 'KeyValue':
+                        $elements[] = KeyValue::fromXML($node);
+                        break;
+                    case 'RetrievalMethod':
+                        $elements[] = RetrievalMethod::fromXML($node);
                         break;
                     case 'X509Data':
-                        $info[] = X509Data::fromXML($n);
+                        $elements[] = X509Data::fromXML($node);
                         break;
                     default:
-                        $info[] = new Chunk($n);
+                        $elements[] = new Chunk($node);
                         break;
                 }
-            } elseif ($n->namespaceURI === Constants::XMLENCNS) {
-                switch ($n->localName) {
+            } elseif ($node->namespaceURI === Constants::XMLENCNS) {
+                switch ($node->localName) {
                     case 'EncryptedData':
-                        $info[] = EncryptedData::fromXML($n);
+                        $elements[] = EncryptedData::fromXML($node);
                         break;
                     case 'EncryptedKey':
-                        $info[] = EncryptedKey::fromXML($n);
+                        $elements[] = EncryptedKey::fromXML($node);
                         break;
                     default:
-                        $info[] = new Chunk($n);
+                        $elements[] = new Chunk($node);
                         break;
                 }
             } else {
-                $info[] = new Chunk($n);
+                $elements[] = new Chunk($node);
                 break;
             }
         }
 
-        return new self($info, $Id);
+        return new self($elements, $Id);
     }
+
 
     /**
      * Convert this KeyInfo to XML.
@@ -181,8 +210,8 @@ final class KeyInfo extends AbstractDsElement
             $e->setAttribute('Id', $this->Id);
         }
 
-        foreach ($this->info as $n) {
-            $n->toXML($e);
+        foreach ($this->getInfo() as $elt) {
+            $elt->toXML($e);
         }
 
         return $e;
