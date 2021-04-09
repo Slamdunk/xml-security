@@ -7,6 +7,7 @@ namespace SimpleSAML\XMLSecurity\XML\ds;
 use DOMElement;
 use SimpleSAML\Assert\Assert;
 use SimpleSAML\XML\Exception\InvalidDOMElementException;
+use SimpleSAML\XML\ExtendableElementTrait;
 use SimpleSAML\XMLSecurity\Constants;
 use SimpleSAML\XMLSecurity\Exception\InvalidArgumentException;
 
@@ -17,6 +18,9 @@ use SimpleSAML\XMLSecurity\Exception\InvalidArgumentException;
  */
 final class SignatureMethod extends AbstractDsElement
 {
+    use ExtendableElementTrait;
+
+
     /**
      * The algorithm.
      *
@@ -26,13 +30,24 @@ final class SignatureMethod extends AbstractDsElement
 
 
     /**
+     * @return array|string
+     */
+    public function getNamespace()
+    {
+        return Constants::XS_ANY_NS_OTHER;
+    }
+
+
+    /**
      * Initialize a SignatureMethod element.
      *
      * @param string $algorithm
+     * @param array $elements
      */
-    public function __construct(string $algorithm)
+    public function __construct(string $algorithm, array $elements)
     {
         $this->setAlgorithm($algorithm);
+        $this->setElements($elements);
     }
 
 
@@ -94,7 +109,16 @@ final class SignatureMethod extends AbstractDsElement
 
         $Algorithm = SignatureMethod::getAttribute($xml, 'Algorithm');
 
-        return new self($Algorithm);
+        $elements = [];
+        foreach ($xml->childNodes as $elt) {
+            if (!($elt instanceof DOMElement)) {
+                continue;
+            }
+
+            $elements[] = new Chunk($elt);
+        }
+
+        return new self($Algorithm, $elements);
     }
 
 
@@ -108,6 +132,12 @@ final class SignatureMethod extends AbstractDsElement
     {
         $e = $this->instantiateParentElement($parent);
         $e->setAttribute('Algorithm', $this->Algorithm);
+
+        foreach ($this->elements as $elt) {
+            if (!$elt->isEmptyElement()) {
+                $elt->toXML($e);
+            }
+        }
 
         return $e;
     }
